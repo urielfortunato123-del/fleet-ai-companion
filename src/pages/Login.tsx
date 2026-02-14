@@ -1,20 +1,42 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Car, Lock, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
+  const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      navigate("/");
-    }, 800);
+
+    if (isSignUp) {
+      const { error } = await signUp(email, password, fullName);
+      setLoading(false);
+      if (error) {
+        toast({ title: "Erro ao cadastrar", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Cadastro realizado!", description: "Verifique seu e-mail para confirmar a conta." });
+        setIsSignUp(false);
+      }
+    } else {
+      const { error } = await signIn(email, password);
+      setLoading(false);
+      if (error) {
+        toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
+      } else {
+        navigate("/");
+      }
+    }
   };
 
   return (
@@ -64,11 +86,28 @@ export default function Login() {
           </div>
 
           <div className="space-y-2 text-center lg:text-left">
-            <h2 className="text-2xl font-bold text-foreground">Bem-vindo de volta</h2>
-            <p className="text-sm text-muted-foreground">Entre com suas credenciais para acessar o sistema</p>
+            <h2 className="text-2xl font-bold text-foreground">
+              {isSignUp ? "Criar conta" : "Bem-vindo de volta"}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {isSignUp ? "Preencha os dados para criar sua conta" : "Entre com suas credenciais para acessar o sistema"}
+            </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {isSignUp && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Nome completo</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Seu nome"
+                  required
+                  className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">E-mail</label>
               <input
@@ -76,6 +115,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="analista@empresa.com.br"
+                required
                 className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -87,6 +127,8 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  required
+                  minLength={6}
                   className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring pr-10"
                 />
                 <button
@@ -103,12 +145,18 @@ export default function Login() {
               disabled={loading}
               className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? (isSignUp ? "Cadastrando..." : "Entrando...") : (isSignUp ? "Cadastrar" : "Entrar")}
             </button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground">
-            Esqueceu a senha? Contate o administrador do sistema.
+          <p className="text-center text-sm text-muted-foreground">
+            {isSignUp ? "Já tem uma conta?" : "Não tem conta?"}{" "}
+            <button
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="font-medium text-primary hover:underline"
+            >
+              {isSignUp ? "Entrar" : "Cadastre-se"}
+            </button>
           </p>
         </div>
       </div>
