@@ -10,6 +10,7 @@ import DailyOps from "@/pages/DailyOps";
 import Vehicles from "@/pages/Vehicles";
 import AIAssistant from "@/pages/AIAssistant";
 import Maintenance from "@/pages/Maintenance";
+import FuelPage from "@/pages/FuelPage";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import OptimizationStudy from "@/pages/OptimizationStudy";
 import NotFound from "./pages/NotFound";
@@ -28,7 +29,7 @@ const App = () => (
           <Route path="/daily-ops" element={<AppLayout><DailyOps /></AppLayout>} />
           <Route path="/vehicles" element={<AppLayout><Vehicles /></AppLayout>} />
           <Route path="/maintenance" element={<AppLayout><Maintenance /></AppLayout>} />
-          <Route path="/fuel" element={<AppLayout><PlaceholderPage title="Combustível" description="Importação CSV/Excel, consumo médio por veículo, desvios e ranking de eficiência." /></AppLayout>} />
+          <Route path="/fuel" element={<AppLayout><FuelPage /></AppLayout>} />
           <Route path="/tires" element={<AppLayout><PlaceholderPage title="Pneus" description="Vida útil, rodízio, custo por km e previsão de troca." /></AppLayout>} />
           <Route path="/fines" element={<AppLayout><PlaceholderPage title="Multas & Documentos" description="Gestão de multas, vencimentos de documentos, upload e histórico." /></AppLayout>} />
           <Route path="/incidents" element={<AppLayout><PlaceholderPage title="Ocorrências" description="Registro de acidentes, panes e reboques com anexos." /></AppLayout>} />
