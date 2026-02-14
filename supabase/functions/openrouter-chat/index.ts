@@ -38,7 +38,7 @@ Use formatação markdown para organizar suas respostas.`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-120b:free",
+        model: "google/gemma-3-27b-it:free",
         messages: [systemMessage, ...formattedMessages],
         reasoning: { enabled: true },
         stream: true,
