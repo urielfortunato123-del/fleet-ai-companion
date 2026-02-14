@@ -3,6 +3,7 @@ import {
   Bot, Send, Calendar, TrendingUp, AlertTriangle, BarChart3,
   GitCompare, FileText, Loader2, Sparkles
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
@@ -18,49 +19,7 @@ const quickActions = [
   { icon: FileText, label: "Relatório diretoria", prompt: "Gere um relatório executivo mensal para apresentação à diretoria." },
 ];
 
-const mockResponses: Record<string, string> = {
-  "Quais são as prioridades do dia para a gestão da frota?": `## 🔴 Prioridades do Dia — 14/02/2026
-
-### Ações Imediatas (Críticas)
-1. **Preventiva vencida — AAB3C12** (Fiat Strada 2022, Matriz SP)
-   - 12.000 km excedidos desde a última troca de óleo
-   - **Ação:** Agendar OS preventiva emergencial hoje
-   - *Fonte: work_orders, odometer_logs*
-
-2. **CNH vencida — Carlos Silva**
-   - Vencimento: 01/02/2026 (13 dias atrás)
-   - Veículo vinculado: AAB3C12
-   - **Ação:** Suspender atribuição e notificar RH
-   - *Fonte: drivers, assignments*
-
-### Alta Prioridade
-3. **Consumo anômalo — BBD5E67** (4.2 km/l vs média 7.1)
-   - Possível vazamento ou uso indevido
-   - **Ação:** Solicitar inspeção mecânica
-   
-4. **3 CRLVs vencendo em 5 dias**
-   - Veículos: CCF7G89, DDH9I01, EEJ1K23
-   - **Ação:** Encaminhar renovação imediata
-
-### Média Prioridade
-5. **12 rodízios de pneus atrasados** — Agendar para esta semana
-6. **Veículo EEJ1K23 parado há 30+ dias** — Avaliar destinação
-
-> **Confiança:** Alta (95%) — Dados completos para todos os itens.`,
-
-  "default": `## Análise em Processamento
-
-Estou analisando os dados da frota para responder sua solicitação. Em um sistema completo, eu consultaria diretamente o banco de dados PostgreSQL para trazer informações precisas e atualizadas.
-
-### O que eu faria:
-1. Consultaria as tabelas relevantes (vehicles, work_orders, fuel_logs, etc.)
-2. Aplicaria os filtros e cálculos necessários
-3. Geraria uma resposta com evidências e recomendações
-
-> **Nota:** Esta é uma demonstração. Em produção, as respostas serão baseadas em dados reais via RAG/SQL tool.
-
-*Fonte: Demonstração — dados mock*`
-};
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/huggingface-chat`;
 
 export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -74,17 +33,113 @@ export default function AIAssistant() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
-    
+
     const userMsg: Message = { role: "user", content: text };
-    setMessages(prev => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
 
-    // Simulate response
-    await new Promise(r => setTimeout(r, 1500));
-    
-    const response = mockResponses[text] || mockResponses["default"];
-    setMessages(prev => [...prev, { role: "assistant", content: response }]);
+    let assistantSoFar = "";
+
+    const upsertAssistant = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant") {
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
+        }
+        return [...prev, { role: "assistant", content: assistantSoFar }];
+      });
+    };
+
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
+        toast.error(err.error || `Erro ${resp.status}`);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!resp.body) {
+        toast.error("Sem resposta do servidor");
+        setIsLoading(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let streamDone = false;
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) upsertAssistant(content);
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split("\n")) {
+          if (!raw) continue;
+          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+          if (raw.startsWith(":") || raw.trim() === "") continue;
+          if (!raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) upsertAssistant(content);
+          } catch { /* ignore */ }
+        }
+      }
+
+      // If no content was streamed, show fallback
+      if (!assistantSoFar) {
+        upsertAssistant("Desculpe, não consegui gerar uma resposta. Tente novamente.");
+      }
+    } catch (e) {
+      console.error("Chat error:", e);
+      toast.error("Erro ao conectar com a IA. Verifique sua conexão.");
+    }
+
     setIsLoading(false);
   };
 
@@ -98,7 +153,7 @@ export default function AIAssistant() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-foreground">Assistente IA</h1>
-            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — consulta dados reais</p>
+            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — Hugging Face AI</p>
           </div>
         </div>
       </div>
@@ -113,12 +168,11 @@ export default function AIAssistant() {
             <div className="text-center space-y-2">
               <h2 className="text-xl font-bold text-foreground">Como posso ajudar?</h2>
               <p className="text-sm text-muted-foreground max-w-md">
-                Sou seu analista sênior de frota. Consulto os dados reais do sistema
-                para gerar relatórios, priorizar ações e recomendar melhorias.
+                Sou seu analista sênior de frota com IA da Hugging Face.
+                Consulto dados e gero relatórios, priorizo ações e recomendo melhorias.
               </p>
             </div>
 
-            {/* Quick actions */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full max-w-2xl">
               {quickActions.map((action) => {
                 const Icon = action.icon;
@@ -151,7 +205,7 @@ export default function AIAssistant() {
                     if (line.startsWith('### ')) return <h3 key={j}>{line.replace('### ', '')}</h3>;
                     if (line.startsWith('> ')) return <blockquote key={j}><p>{line.replace('> ', '')}</p></blockquote>;
                     if (line.startsWith('- ')) return <p key={j} className="pl-3">• {line.replace('- ', '')}</p>;
-                    if (line.match(/^\d+\./)) return <p key={j}>{line.replace(/\*\*(.*?)\*\*/g, '').trim() ? line : ''}</p>;
+                    if (line.match(/^\d+\./)) return <p key={j}>{line}</p>;
                     if (line.trim() === '') return <br key={j} />;
                     return <p key={j} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') }} />;
                   })}
@@ -163,11 +217,11 @@ export default function AIAssistant() {
           </div>
         ))}
 
-        {isLoading && (
+        {isLoading && !messages[messages.length - 1]?.content && (
           <div className="flex justify-start animate-slide-in">
             <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-2">
               <Loader2 className="h-4 w-4 text-info animate-spin" />
-              <span className="text-xs text-muted-foreground">Analisando dados da frota...</span>
+              <span className="text-xs text-muted-foreground">Analisando com Hugging Face...</span>
             </div>
           </div>
         )}
