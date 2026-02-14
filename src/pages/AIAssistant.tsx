@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Bot, Send, Calendar, TrendingUp, AlertTriangle, BarChart3,
-  GitCompare, FileText, Loader2, Sparkles, KeyRound, Eye, EyeOff
+  GitCompare, FileText, Loader2, Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,19 +19,14 @@ const quickActions = [
   { icon: FileText, label: "Relatório diretoria", prompt: "Gere um relatório executivo mensal para apresentação à diretoria." },
 ];
 
-const LM_STUDIO_URL = "http://192.168.1.119:1234/v1/chat/completions";
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/openrouter-chat`;
 
-const SYSTEM_PROMPT = `Você é o FrotaSênior AI, um analista sênior de gestão de frotas com 20 anos de experiência.
-Você ajuda gestores a tomar decisões inteligentes sobre manutenção, custos, consumo e otimização da frota.
-Responda sempre em português brasileiro, de forma objetiva e com dados quando possível.
-Use formatação markdown para organizar suas respostas.`;
+// System prompt is defined in the edge function
 
 export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("lmstudio_api_key") || "");
-  const [showKey, setShowKey] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,29 +56,19 @@ export default function AIAssistant() {
     };
 
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (apiKey.trim()) {
-        headers["Authorization"] = `Bearer ${apiKey.trim()}`;
-        localStorage.setItem("lmstudio_api_key", apiKey.trim());
-      }
-
-      const resp = await fetch(LM_STUDIO_URL, {
+      const resp = await fetch(CHAT_URL, {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
         body: JSON.stringify({
-          model: "gemma-3-4b",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...updatedMessages.map(m => ({ role: m.role, content: m.content })),
-          ],
-          stream: true,
-          temperature: 0.7,
-          max_tokens: 2048,
+          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
         }),
       });
 
       if (!resp.ok) {
-        toast.error(`Erro ${resp.status} — Verifique se o LM Studio está rodando em localhost:1234`);
+        toast.error(`Erro ${resp.status} — Falha ao conectar com a IA.`);
         setIsLoading(false);
         return;
       }
@@ -153,7 +138,7 @@ export default function AIAssistant() {
       }
     } catch (e) {
       console.error("Chat error:", e);
-      toast.error("Erro ao conectar com o LM Studio. Verifique se está rodando em localhost:1234.");
+      toast.error("Erro ao conectar com a IA. Tente novamente.");
     }
 
     setIsLoading(false);
@@ -163,34 +148,13 @@ export default function AIAssistant() {
     <div className="flex flex-col h-[calc(100vh-3.5rem)]">
       {/* Header */}
       <div className="border-b border-border bg-card px-4 lg:px-6 py-4">
-        <div className="flex items-center gap-3 justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-info/10">
-              <Bot className="h-5 w-5 text-info" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground">Assistente IA</h1>
-              <p className="text-xs text-muted-foreground">Analista Sênior de Frota — LM Studio (local)</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-info/10">
+            <Bot className="h-5 w-5 text-info" />
           </div>
-          <div className="flex items-center gap-2">
-            <KeyRound className="h-4 w-4 text-muted-foreground" />
-            <div className="relative">
-              <input
-                type={showKey ? "text" : "password"}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="API Key"
-                className="w-40 rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-              </button>
-            </div>
+          <div>
+            <h1 className="text-lg font-bold text-foreground">Assistente IA</h1>
+            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — OpenRouter (GPT-OSS 120B)</p>
           </div>
         </div>
       </div>
