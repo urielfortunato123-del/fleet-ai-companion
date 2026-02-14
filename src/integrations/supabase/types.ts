@@ -14,7 +14,443 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      fines: {
+        Row: {
+          amount: number
+          auto_number: string | null
+          code: string
+          created_at: string
+          date: string
+          discount_amount: number | null
+          driver_name: string
+          due_date: string | null
+          id: string
+          infraction: string
+          location: string
+          plate: string
+          points: number
+          severity: string
+          status: string
+          unit: string
+          vehicle_label: string
+        }
+        Insert: {
+          amount?: number
+          auto_number?: string | null
+          code: string
+          created_at?: string
+          date?: string
+          discount_amount?: number | null
+          driver_name?: string
+          due_date?: string | null
+          id?: string
+          infraction: string
+          location?: string
+          plate: string
+          points?: number
+          severity?: string
+          status?: string
+          unit?: string
+          vehicle_label?: string
+        }
+        Update: {
+          amount?: number
+          auto_number?: string | null
+          code?: string
+          created_at?: string
+          date?: string
+          discount_amount?: number | null
+          driver_name?: string
+          due_date?: string | null
+          id?: string
+          infraction?: string
+          location?: string
+          plate?: string
+          points?: number
+          severity?: string
+          status?: string
+          unit?: string
+          vehicle_label?: string
+        }
+        Relationships: []
+      }
+      fuel_logs: {
+        Row: {
+          cost_per_liter: number
+          created_at: string
+          date: string
+          driver: string | null
+          fuel_type: string
+          id: string
+          liters: number
+          odometer: number
+          plate: string
+          station: string
+          total_cost: number
+          unit: string
+          vehicle_label: string
+        }
+        Insert: {
+          cost_per_liter?: number
+          created_at?: string
+          date?: string
+          driver?: string | null
+          fuel_type?: string
+          id?: string
+          liters?: number
+          odometer?: number
+          plate: string
+          station?: string
+          total_cost?: number
+          unit?: string
+          vehicle_label?: string
+        }
+        Update: {
+          cost_per_liter?: number
+          created_at?: string
+          date?: string
+          driver?: string | null
+          fuel_type?: string
+          id?: string
+          liters?: number
+          odometer?: number
+          plate?: string
+          station?: string
+          total_cost?: number
+          unit?: string
+          vehicle_label?: string
+        }
+        Relationships: []
+      }
+      incidents: {
+        Row: {
+          code: string
+          created_at: string
+          damage_estimate: number
+          date: string
+          description: string
+          driver_name: string
+          has_injury: boolean
+          id: string
+          insurance_claim: string | null
+          location: string
+          notes: string | null
+          plate: string
+          police_report: string | null
+          resolved_at: string | null
+          severity: string
+          status: string
+          time: string
+          type: string
+          unit: string
+          vehicle_label: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          damage_estimate?: number
+          date?: string
+          description?: string
+          driver_name?: string
+          has_injury?: boolean
+          id?: string
+          insurance_claim?: string | null
+          location?: string
+          notes?: string | null
+          plate: string
+          police_report?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          time?: string
+          type?: string
+          unit?: string
+          vehicle_label?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          damage_estimate?: number
+          date?: string
+          description?: string
+          driver_name?: string
+          has_injury?: boolean
+          id?: string
+          insurance_claim?: string | null
+          location?: string
+          notes?: string | null
+          plate?: string
+          police_report?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          time?: string
+          type?: string
+          unit?: string
+          vehicle_label?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          role: string
+          unit: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          role?: string
+          unit?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          role?: string
+          unit?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tires: {
+        Row: {
+          brand: string
+          cost_unit: number
+          created_at: string
+          current_km: number
+          depth_mm: number
+          id: string
+          installed_at: string | null
+          installed_km: number
+          life_expected_km: number
+          model: string
+          plate: string
+          position: string
+          size: string
+          status: string
+          unit: string
+        }
+        Insert: {
+          brand: string
+          cost_unit?: number
+          created_at?: string
+          current_km?: number
+          depth_mm?: number
+          id?: string
+          installed_at?: string | null
+          installed_km?: number
+          life_expected_km?: number
+          model: string
+          plate: string
+          position: string
+          size?: string
+          status?: string
+          unit?: string
+        }
+        Update: {
+          brand?: string
+          cost_unit?: number
+          created_at?: string
+          current_km?: number
+          depth_mm?: number
+          id?: string
+          installed_at?: string | null
+          installed_km?: number
+          life_expected_km?: number
+          model?: string
+          plate?: string
+          position?: string
+          size?: string
+          status?: string
+          unit?: string
+        }
+        Relationships: []
+      }
+      vehicle_documents: {
+        Row: {
+          code: string
+          cost: number | null
+          created_at: string
+          description: string
+          doc_type: string
+          expiry_date: string
+          id: string
+          issue_date: string
+          notes: string | null
+          plate: string
+          responsible: string
+          status: string
+          unit: string
+          vehicle_label: string
+        }
+        Insert: {
+          code: string
+          cost?: number | null
+          created_at?: string
+          description?: string
+          doc_type: string
+          expiry_date: string
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          plate: string
+          responsible?: string
+          status?: string
+          unit?: string
+          vehicle_label?: string
+        }
+        Update: {
+          code?: string
+          cost?: number | null
+          created_at?: string
+          description?: string
+          doc_type?: string
+          expiry_date?: string
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          plate?: string
+          responsible?: string
+          status?: string
+          unit?: string
+          vehicle_label?: string
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          brand: string
+          cost_month: number
+          created_at: string
+          current_km: number
+          driver: string | null
+          fuel_avg: number
+          health_score: number
+          id: string
+          last_maintenance: string | null
+          model: string
+          next_maintenance: string | null
+          plate: string
+          region: string
+          status: string
+          unit: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          brand: string
+          cost_month?: number
+          created_at?: string
+          current_km?: number
+          driver?: string | null
+          fuel_avg?: number
+          health_score?: number
+          id?: string
+          last_maintenance?: string | null
+          model: string
+          next_maintenance?: string | null
+          plate: string
+          region?: string
+          status?: string
+          unit?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          brand?: string
+          cost_month?: number
+          created_at?: string
+          current_km?: number
+          driver?: string | null
+          fuel_avg?: number
+          health_score?: number
+          id?: string
+          last_maintenance?: string | null
+          model?: string
+          next_maintenance?: string | null
+          plate?: string
+          region?: string
+          status?: string
+          unit?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      work_orders: {
+        Row: {
+          closed_at: string | null
+          code: string
+          cost_total: number
+          created_at: string
+          description: string
+          id: string
+          km_at_service: number
+          opened_at: string
+          plate: string
+          priority: string
+          status: string
+          supplier: string
+          type: string
+          unit: string
+          vehicle_id: string | null
+          vehicle_label: string
+        }
+        Insert: {
+          closed_at?: string | null
+          code: string
+          cost_total?: number
+          created_at?: string
+          description?: string
+          id?: string
+          km_at_service?: number
+          opened_at?: string
+          plate: string
+          priority?: string
+          status?: string
+          supplier?: string
+          type?: string
+          unit?: string
+          vehicle_id?: string | null
+          vehicle_label?: string
+        }
+        Update: {
+          closed_at?: string | null
+          code?: string
+          cost_total?: number
+          created_at?: string
+          description?: string
+          id?: string
+          km_at_service?: number
+          opened_at?: string
+          plate?: string
+          priority?: string
+          status?: string
+          supplier?: string
+          type?: string
+          unit?: string
+          vehicle_id?: string | null
+          vehicle_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
