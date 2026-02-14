@@ -1,16 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Bot, Send, Calendar, TrendingUp, AlertTriangle, BarChart3,
-  GitCompare, FileText, Loader2, Sparkles, Paperclip, X, Image, FileSpreadsheet
+  GitCompare, FileText, Loader2, Sparkles, Paperclip, X, Image, FileSpreadsheet,
+  Database, CheckCircle2
 } from "lucide-react";
 import { toast } from "sonner";
-import { useChatFileUpload } from "@/hooks/useChatFileUpload";
+import { useChatFileUpload, FileAttachment } from "@/hooks/useChatFileUpload";
+import { supabase } from "@/integrations/supabase/client";
+import { detectModule, mapRows, ImportModule } from "@/data/importModules";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Message {
   role: "user" | "assistant";
   content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
   displayContent?: string;
   attachments?: Array<{ name: string; type: string; previewUrl?: string }>;
+  excelData?: { rows: Record<string, any>[]; headers: string[]; fileName: string }[];
 }
 
 const quickActions = [
@@ -28,24 +33,65 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [importingIndex, setImportingIndex] = useState<number | null>(null);
+  const [importedIndices, setImportedIndices] = useState<Set<number>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
   const {
     attachments, isUploading, fileInputRef,
     handleFiles, removeAttachment, clearAttachments,
-    buildMessageContent, getImageUrls,
+    buildMessageContent, getImageUrls, getExcelAttachments,
   } = useChatFileUpload();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleDistributeData = async (msgIndex: number, excelItem: { rows: Record<string, any>[]; headers: string[]; fileName: string }) => {
+    const mod = detectModule(excelItem.headers);
+    if (!mod) {
+      toast.error(`Não foi possível detectar a categoria dos dados de "${excelItem.fileName}". Use a página Importar Dados para mapeamento manual.`);
+      return;
+    }
+
+    setImportingIndex(msgIndex);
+    try {
+      const { dbRows } = mapRows(excelItem.rows, mod);
+      if (dbRows.length === 0) {
+        toast.error(`Nenhum registro válido encontrado para ${mod.label}.`);
+        setImportingIndex(null);
+        return;
+      }
+
+      const errors: string[] = [];
+      const batchSize = 100;
+      for (let i = 0; i < dbRows.length; i += batchSize) {
+        const batch = dbRows.slice(i, i + batchSize);
+        const { error } = await supabase.from(mod.table as any).upsert(batch as any);
+        if (error) errors.push(error.message);
+      }
+
+      queryClient.invalidateQueries();
+
+      if (errors.length === 0) {
+        toast.success(`${dbRows.length} registros importados em "${mod.label}" com sucesso!`);
+        setImportedIndices(prev => new Set(prev).add(msgIndex));
+      } else {
+        toast.error(`Importação parcial: ${errors.length} erro(s). ${dbRows.length - errors.length} registros OK.`);
+      }
+    } catch (err: any) {
+      toast.error(`Erro ao importar: ${err.message}`);
+    }
+    setImportingIndex(null);
+  };
+
   const sendMessage = async (text: string) => {
     if ((!text.trim() && attachments.length === 0) || isLoading) return;
 
     const imageUrls = getImageUrls();
+    const excelAtts = getExcelAttachments();
     const finalText = buildMessageContent(text);
 
-    // Build content for API (multimodal if images)
     let apiContent: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
     if (imageUrls.length > 0) {
       apiContent = [
@@ -60,11 +106,8 @@ export default function AIAssistant() {
       role: "user",
       content: apiContent,
       displayContent: text,
-      attachments: attachments.map((a) => ({
-        name: a.name,
-        type: a.type,
-        previewUrl: a.previewUrl,
-      })),
+      attachments: attachments.map((a) => ({ name: a.name, type: a.type, previewUrl: a.previewUrl })),
+      excelData: excelAtts.map((a) => ({ rows: a.rawRows!, headers: a.headers!, fileName: a.name })),
     };
 
     const updatedMessages = [...messages, userMsg];
@@ -74,7 +117,6 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     let assistantSoFar = "";
-
     const upsertAssistant = (chunk: string) => {
       assistantSoFar += chunk;
       setMessages((prev) => {
@@ -99,22 +141,14 @@ export default function AIAssistant() {
       });
 
       if (!resp.ok) {
-        if (resp.status === 429) {
-          toast.error("Limite de requisições atingido. Aguarde 1 minuto e tente novamente.");
-        } else if (resp.status === 402) {
-          toast.error("Créditos esgotados. Adicione créditos à sua conta.");
-        } else {
-          toast.error(`Erro ${resp.status} — Falha ao conectar com a IA.`);
-        }
+        if (resp.status === 429) toast.error("Limite de requisições atingido. Aguarde 1 minuto.");
+        else if (resp.status === 402) toast.error("Créditos esgotados.");
+        else toast.error(`Erro ${resp.status} — Falha ao conectar com a IA.`);
         setIsLoading(false);
         return;
       }
 
-      if (!resp.body) {
-        toast.error("Sem resposta do servidor");
-        setIsLoading(false);
-        return;
-      }
+      if (!resp.body) { toast.error("Sem resposta do servidor"); setIsLoading(false); return; }
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -125,19 +159,15 @@ export default function AIAssistant() {
         const { done, value } = await reader.read();
         if (done) break;
         textBuffer += decoder.decode(value, { stream: true });
-
         let newlineIndex: number;
         while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
           let line = textBuffer.slice(0, newlineIndex);
           textBuffer = textBuffer.slice(newlineIndex + 1);
-
           if (line.endsWith("\r")) line = line.slice(0, -1);
           if (line.startsWith(":") || line.trim() === "") continue;
           if (!line.startsWith("data: ")) continue;
-
           const jsonStr = line.slice(6).trim();
           if (jsonStr === "[DONE]") { streamDone = true; break; }
-
           try {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
@@ -165,14 +195,11 @@ export default function AIAssistant() {
         }
       }
 
-      if (!assistantSoFar) {
-        upsertAssistant("Desculpe, não consegui gerar uma resposta. Tente novamente.");
-      }
+      if (!assistantSoFar) upsertAssistant("Desculpe, não consegui gerar uma resposta. Tente novamente.");
     } catch (e) {
       console.error("Chat error:", e);
       toast.error("Erro ao conectar com a IA. Tente novamente.");
     }
-
     setIsLoading(false);
   };
 
@@ -221,16 +248,12 @@ export default function AIAssistant() {
                 Consulto dados e gero relatórios, priorizo ações e recomendo melhorias.
               </p>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full max-w-2xl">
               {quickActions.map((action) => {
                 const Icon = action.icon;
                 return (
-                  <button
-                    key={action.label}
-                    onClick={() => sendMessage(action.prompt)}
-                    className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 text-left hover:bg-muted/50 transition-colors group"
-                  >
+                  <button key={action.label} onClick={() => sendMessage(action.prompt)}
+                    className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 text-left hover:bg-muted/50 transition-colors group">
                     <Icon className="h-4 w-4 text-muted-foreground group-hover:text-info transition-colors shrink-0" />
                     <span className="text-xs font-medium text-foreground">{action.label}</span>
                   </button>
@@ -245,9 +268,9 @@ export default function AIAssistant() {
             <div className={`max-w-[85%] lg:max-w-[70%] rounded-2xl px-4 py-3 text-sm
               ${msg.role === "user"
                 ? "bg-primary text-primary-foreground rounded-br-md"
-                : "bg-card border border-border text-card-foreground rounded-bl-md"}`}
-            >
-              {/* Attachment previews for user messages */}
+                : "bg-card border border-border text-card-foreground rounded-bl-md"}`}>
+
+              {/* Attachment previews */}
               {msg.role === "user" && msg.attachments && msg.attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
                   {msg.attachments.map((att, j) => (
@@ -280,6 +303,45 @@ export default function AIAssistant() {
               ) : (
                 <p className="whitespace-pre-wrap">{getDisplayText(msg)}</p>
               )}
+
+              {/* Distribute data button for user messages with Excel */}
+              {msg.role === "user" && msg.excelData && msg.excelData.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {msg.excelData.map((excelItem, j) => {
+                    const detectedMod = detectModule(excelItem.headers);
+                    const isImported = importedIndices.has(i);
+                    const isCurrentlyImporting = importingIndex === i;
+
+                    return (
+                      <div key={j} className="flex items-center gap-2">
+                        {isImported ? (
+                          <div className="flex items-center gap-1.5 rounded-lg bg-primary-foreground/20 px-3 py-1.5 text-xs">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Importado em {detectedMod?.label || "?"}</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleDistributeData(i, excelItem)}
+                            disabled={isCurrentlyImporting}
+                            className="flex items-center gap-1.5 rounded-lg bg-primary-foreground/20 hover:bg-primary-foreground/30 px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                          >
+                            {isCurrentlyImporting ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Database className="h-3.5 w-3.5" />
+                            )}
+                            <span>
+                              {detectedMod
+                                ? `Importar ${excelItem.rows.length} registros → ${detectedMod.label}`
+                                : `Distribuir dados (${excelItem.rows.length} linhas)`}
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -303,9 +365,7 @@ export default function AIAssistant() {
               <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs">
                 {att.type === "image" && att.previewUrl ? (
                   <img src={att.previewUrl} alt={att.name} className="h-8 w-8 rounded object-cover" />
-                ) : (
-                  renderFileIcon(att.type)
-                )}
+                ) : renderFileIcon(att.type)}
                 <span className="truncate max-w-[120px] text-foreground">{att.name}</span>
                 <button onClick={() => removeAttachment(i)} className="text-muted-foreground hover:text-destructive">
                   <X className="h-3 w-3" />
@@ -318,40 +378,21 @@ export default function AIAssistant() {
 
       {/* Input */}
       <div className="border-t border-border bg-card p-4">
-        <form
-          onSubmit={(e) => { e.preventDefault(); sendMessage(input); }}
-          className="flex gap-2 max-w-4xl mx-auto"
-        >
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            multiple
+        <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex gap-2 max-w-4xl mx-auto">
+          <input type="file" ref={fileInputRef} className="hidden" multiple
             accept=".jpg,.jpeg,.png,.gif,.webp,.xlsx,.xls,.csv,.pdf"
-            onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading || isUploading}
+            onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }} />
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isLoading || isUploading}
             className="rounded-xl border border-input bg-background p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-30"
-            title="Anexar arquivo (Excel, PDF, Imagem)"
-          >
+            title="Anexar arquivo (Excel, PDF, Imagem)">
             {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
           </button>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+          <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
             placeholder="Pergunte sobre a frota..."
             className="flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={(!input.trim() && attachments.length === 0) || isLoading}
-            className="rounded-xl bg-primary p-3 text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-30"
-          >
+            disabled={isLoading} />
+          <button type="submit" disabled={(!input.trim() && attachments.length === 0) || isLoading}
+            className="rounded-xl bg-primary p-3 text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-30">
             <Send className="h-4 w-4" />
           </button>
         </form>
