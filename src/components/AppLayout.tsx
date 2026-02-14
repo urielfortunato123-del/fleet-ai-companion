@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Car, Wrench, Fuel, CircleDot, FileText, AlertTriangle,
-  Users, Settings, Bot, CalendarClock, Menu, X, LogOut, ChevronLeft, TrendingDown
+  Users, Settings, Bot, CalendarClock, Menu, X, LogOut, ChevronLeft, TrendingDown, Gauge
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -17,6 +17,7 @@ const navItems = [
   { path: "/incidents", label: "Ocorrências", icon: AlertTriangle },
   { path: "/drivers", label: "Motoristas", icon: Users },
   { path: "/optimization", label: "Estudo Otimização", icon: TrendingDown },
+  { path: "/utilization", label: "Utilização Frota", icon: Gauge },
   { path: "/assistant", label: "Assistente IA", icon: Bot },
   { path: "/admin", label: "Admin", icon: Settings },
 ];

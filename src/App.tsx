@@ -18,6 +18,7 @@ import PlaceholderPage from "@/components/PlaceholderPage";
 import FinesDocsPage from "@/pages/FinesDocsPage";
 import IncidentsPage from "@/pages/IncidentsPage";
 import OptimizationStudy from "@/pages/OptimizationStudy";
+import FleetUtilization from "@/pages/FleetUtilization";
 import VehicleDetail from "@/pages/VehicleDetail";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/incidents" element={<ProtectedRoute><AppLayout><IncidentsPage /></AppLayout></ProtectedRoute>} />
             <Route path="/drivers" element={<ProtectedRoute><AppLayout><PlaceholderPage title="Motoristas" description="Perfil, CNH, histórico de atribuições e multas." /></AppLayout></ProtectedRoute>} />
             <Route path="/optimization" element={<ProtectedRoute><AppLayout><OptimizationStudy /></AppLayout></ProtectedRoute>} />
+            <Route path="/utilization" element={<ProtectedRoute><AppLayout><FleetUtilization /></AppLayout></ProtectedRoute>} />
             <Route path="/assistant" element={<ProtectedRoute><AppLayout><AIAssistant /></AppLayout></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AppLayout><PlaceholderPage title="Administração" description="Gestão de usuários, permissões, unidades, centros de custo e templates." /></AppLayout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
