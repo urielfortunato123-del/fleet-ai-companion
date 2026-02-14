@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
@@ -27,23 +29,25 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
-          <Route path="/daily-ops" element={<AppLayout><DailyOps /></AppLayout>} />
-          <Route path="/vehicles" element={<AppLayout><Vehicles /></AppLayout>} />
-          <Route path="/vehicles/:id" element={<AppLayout><VehicleDetail /></AppLayout>} />
-          <Route path="/maintenance" element={<AppLayout><Maintenance /></AppLayout>} />
-          <Route path="/fuel" element={<AppLayout><FuelPage /></AppLayout>} />
-          <Route path="/tires" element={<AppLayout><TiresPage /></AppLayout>} />
-          <Route path="/fines" element={<AppLayout><FinesDocsPage /></AppLayout>} />
-          <Route path="/incidents" element={<AppLayout><IncidentsPage /></AppLayout>} />
-          <Route path="/drivers" element={<AppLayout><PlaceholderPage title="Motoristas" description="Perfil, CNH, histórico de atribuições e multas." /></AppLayout>} />
-          <Route path="/optimization" element={<AppLayout><OptimizationStudy /></AppLayout>} />
-          <Route path="/assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
-          <Route path="/admin" element={<AppLayout><PlaceholderPage title="Administração" description="Gestão de usuários, permissões, unidades, centros de custo e templates." /></AppLayout>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/daily-ops" element={<ProtectedRoute><AppLayout><DailyOps /></AppLayout></ProtectedRoute>} />
+            <Route path="/vehicles" element={<ProtectedRoute><AppLayout><Vehicles /></AppLayout></ProtectedRoute>} />
+            <Route path="/vehicles/:id" element={<ProtectedRoute><AppLayout><VehicleDetail /></AppLayout></ProtectedRoute>} />
+            <Route path="/maintenance" element={<ProtectedRoute><AppLayout><Maintenance /></AppLayout></ProtectedRoute>} />
+            <Route path="/fuel" element={<ProtectedRoute><AppLayout><FuelPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/tires" element={<ProtectedRoute><AppLayout><TiresPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/fines" element={<ProtectedRoute><AppLayout><FinesDocsPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/incidents" element={<ProtectedRoute><AppLayout><IncidentsPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/drivers" element={<ProtectedRoute><AppLayout><PlaceholderPage title="Motoristas" description="Perfil, CNH, histórico de atribuições e multas." /></AppLayout></ProtectedRoute>} />
+            <Route path="/optimization" element={<ProtectedRoute><AppLayout><OptimizationStudy /></AppLayout></ProtectedRoute>} />
+            <Route path="/assistant" element={<ProtectedRoute><AppLayout><AIAssistant /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AppLayout><PlaceholderPage title="Administração" description="Gestão de usuários, permissões, unidades, centros de custo e templates." /></AppLayout></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

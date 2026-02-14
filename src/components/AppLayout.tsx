@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Car, Wrench, Fuel, CircleDot, FileText, AlertTriangle,
   Users, Settings, Bot, CalendarClock, Menu, X, LogOut, ChevronLeft, TrendingDown
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -24,6 +25,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut, user } = useAuth();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -112,8 +115,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground hidden sm:inline">850 veículos</span>
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
-              AS
+              {user?.email?.substring(0, 2).toUpperCase() ?? "U"}
             </div>
+            <button
+              onClick={async () => { await signOut(); navigate("/login"); }}
+              className="rounded-md p-1.5 text-muted-foreground hover:text-foreground"
+              title="Sair"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </header>
 
