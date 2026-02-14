@@ -18,6 +18,7 @@ const navItems = [
   { path: "/drivers", label: "Motoristas", icon: Users },
   { path: "/optimization", label: "Estudo Otimização", icon: TrendingDown },
   { path: "/utilization", label: "Utilização Frota", icon: Gauge },
+  { path: "/import", label: "Importar Dados", icon: FileText },
   { path: "/assistant", label: "Assistente IA", icon: Bot },
   { path: "/admin", label: "Admin", icon: Settings },
 ];

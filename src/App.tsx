@@ -19,10 +19,15 @@ import FinesDocsPage from "@/pages/FinesDocsPage";
 import IncidentsPage from "@/pages/IncidentsPage";
 import OptimizationStudy from "@/pages/OptimizationStudy";
 import FleetUtilization from "@/pages/FleetUtilization";
+import DataImport from "@/pages/DataImport";
 import VehicleDetail from "@/pages/VehicleDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const P = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute><AppLayout>{children}</AppLayout></ProtectedRoute>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -33,20 +38,21 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
-            <Route path="/daily-ops" element={<ProtectedRoute><AppLayout><DailyOps /></AppLayout></ProtectedRoute>} />
-            <Route path="/vehicles" element={<ProtectedRoute><AppLayout><Vehicles /></AppLayout></ProtectedRoute>} />
-            <Route path="/vehicles/:id" element={<ProtectedRoute><AppLayout><VehicleDetail /></AppLayout></ProtectedRoute>} />
-            <Route path="/maintenance" element={<ProtectedRoute><AppLayout><Maintenance /></AppLayout></ProtectedRoute>} />
-            <Route path="/fuel" element={<ProtectedRoute><AppLayout><FuelPage /></AppLayout></ProtectedRoute>} />
-            <Route path="/tires" element={<ProtectedRoute><AppLayout><TiresPage /></AppLayout></ProtectedRoute>} />
-            <Route path="/fines" element={<ProtectedRoute><AppLayout><FinesDocsPage /></AppLayout></ProtectedRoute>} />
-            <Route path="/incidents" element={<ProtectedRoute><AppLayout><IncidentsPage /></AppLayout></ProtectedRoute>} />
-            <Route path="/drivers" element={<ProtectedRoute><AppLayout><PlaceholderPage title="Motoristas" description="Perfil, CNH, histórico de atribuições e multas." /></AppLayout></ProtectedRoute>} />
-            <Route path="/optimization" element={<ProtectedRoute><AppLayout><OptimizationStudy /></AppLayout></ProtectedRoute>} />
-            <Route path="/utilization" element={<ProtectedRoute><AppLayout><FleetUtilization /></AppLayout></ProtectedRoute>} />
-            <Route path="/assistant" element={<ProtectedRoute><AppLayout><AIAssistant /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AppLayout><PlaceholderPage title="Administração" description="Gestão de usuários, permissões, unidades, centros de custo e templates." /></AppLayout></ProtectedRoute>} />
+            <Route path="/" element={<P><Dashboard /></P>} />
+            <Route path="/daily-ops" element={<P><DailyOps /></P>} />
+            <Route path="/vehicles" element={<P><Vehicles /></P>} />
+            <Route path="/vehicles/:id" element={<P><VehicleDetail /></P>} />
+            <Route path="/maintenance" element={<P><Maintenance /></P>} />
+            <Route path="/fuel" element={<P><FuelPage /></P>} />
+            <Route path="/tires" element={<P><TiresPage /></P>} />
+            <Route path="/fines" element={<P><FinesDocsPage /></P>} />
+            <Route path="/incidents" element={<P><IncidentsPage /></P>} />
+            <Route path="/drivers" element={<P><PlaceholderPage title="Motoristas" description="Perfil, CNH, histórico de atribuições e multas." /></P>} />
+            <Route path="/optimization" element={<P><OptimizationStudy /></P>} />
+            <Route path="/utilization" element={<P><FleetUtilization /></P>} />
+            <Route path="/import" element={<P><DataImport /></P>} />
+            <Route path="/assistant" element={<P><AIAssistant /></P>} />
+            <Route path="/admin" element={<P><PlaceholderPage title="Administração" description="Gestão de usuários, permissões, unidades, centros de custo e templates." /></P>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
