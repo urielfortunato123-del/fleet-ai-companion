@@ -68,7 +68,13 @@ export default function AIAssistant() {
       });
 
       if (!resp.ok) {
-        toast.error(`Erro ${resp.status} — Falha ao conectar com a IA.`);
+        if (resp.status === 429) {
+          toast.error("Limite de requisições atingido. Aguarde 1 minuto e tente novamente.");
+        } else if (resp.status === 402) {
+          toast.error("Créditos esgotados. Adicione créditos à sua conta.");
+        } else {
+          toast.error(`Erro ${resp.status} — Falha ao conectar com a IA.`);
+        }
         setIsLoading(false);
         return;
       }
