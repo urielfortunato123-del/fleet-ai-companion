@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Bot, Send, Calendar, TrendingUp, AlertTriangle, BarChart3,
-  GitCompare, FileText, Loader2, Sparkles
+  GitCompare, FileText, Loader2, Sparkles, KeyRound, Eye, EyeOff
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +30,8 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("lmstudio_api_key") || "");
+  const [showKey, setShowKey] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,9 +61,15 @@ export default function AIAssistant() {
     };
 
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (apiKey.trim()) {
+        headers["Authorization"] = `Bearer ${apiKey.trim()}`;
+        localStorage.setItem("lmstudio_api_key", apiKey.trim());
+      }
+
       const resp = await fetch(LM_STUDIO_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           model: "gemma-3-4b",
           messages: [
@@ -155,13 +163,34 @@ export default function AIAssistant() {
     <div className="flex flex-col h-[calc(100vh-3.5rem)]">
       {/* Header */}
       <div className="border-b border-border bg-card px-4 lg:px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-info/10">
-            <Bot className="h-5 w-5 text-info" />
+        <div className="flex items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-info/10">
+              <Bot className="h-5 w-5 text-info" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-foreground">Assistente IA</h1>
+              <p className="text-xs text-muted-foreground">Analista Sênior de Frota — LM Studio (local)</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-foreground">Assistente IA</h1>
-            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — LM Studio (local)</p>
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-muted-foreground" />
+            <div className="relative">
+              <input
+                type={showKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="API Key"
+                className="w-40 rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>
