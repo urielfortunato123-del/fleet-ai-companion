@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { vehiclesData, Vehicle } from "@/data/mockData";
 import StatusChip from "@/components/StatusChip";
@@ -11,6 +12,7 @@ export default function Vehicles() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
+  const navigate = useNavigate();
 
   const filtered = useMemo(() => {
     return vehiclesData.filter((v) => {
@@ -86,7 +88,7 @@ export default function Vehicles() {
             </thead>
             <tbody className="divide-y divide-border">
               {paginated.map((v) => (
-                <tr key={v.id} className="hover:bg-muted/30 transition-colors cursor-pointer">
+                <tr key={v.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/vehicles/${v.id}`)}>
                   <td className="px-4 py-3">
                     <div>
                       <span className="font-mono font-semibold text-foreground">{v.plate}</span>
