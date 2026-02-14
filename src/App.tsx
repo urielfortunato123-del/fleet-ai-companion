@@ -13,6 +13,7 @@ import Maintenance from "@/pages/Maintenance";
 import FuelPage from "@/pages/FuelPage";
 import TiresPage from "@/pages/TiresPage";
 import PlaceholderPage from "@/components/PlaceholderPage";
+import FinesDocsPage from "@/pages/FinesDocsPage";
 import OptimizationStudy from "@/pages/OptimizationStudy";
 import VehicleDetail from "@/pages/VehicleDetail";
 import NotFound from "./pages/NotFound";
@@ -34,7 +35,7 @@ const App = () => (
           <Route path="/maintenance" element={<AppLayout><Maintenance /></AppLayout>} />
           <Route path="/fuel" element={<AppLayout><FuelPage /></AppLayout>} />
           <Route path="/tires" element={<AppLayout><TiresPage /></AppLayout>} />
-          <Route path="/fines" element={<AppLayout><PlaceholderPage title="Multas & Documentos" description="Gestão de multas, vencimentos de documentos, upload e histórico." /></AppLayout>} />
+          <Route path="/fines" element={<AppLayout><FinesDocsPage /></AppLayout>} />
           <Route path="/incidents" element={<AppLayout><PlaceholderPage title="Ocorrências" description="Registro de acidentes, panes e reboques com anexos." /></AppLayout>} />
           <Route path="/drivers" element={<AppLayout><PlaceholderPage title="Motoristas" description="Perfil, CNH, histórico de atribuições e multas." /></AppLayout>} />
           <Route path="/optimization" element={<AppLayout><OptimizationStudy /></AppLayout>} />
