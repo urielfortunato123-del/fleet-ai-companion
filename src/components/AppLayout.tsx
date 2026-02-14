@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Car, Wrench, Fuel, CircleDot, FileText, AlertTriangle,
-  Users, Settings, Bot, CalendarClock, Menu, X, LogOut, ChevronLeft
+  Users, Settings, Bot, CalendarClock, Menu, X, LogOut, ChevronLeft, TrendingDown
 } from "lucide-react";
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
   { path: "/fines", label: "Multas & Docs", icon: FileText },
   { path: "/incidents", label: "Ocorrências", icon: AlertTriangle },
   { path: "/drivers", label: "Motoristas", icon: Users },
+  { path: "/optimization", label: "Estudo Otimização", icon: TrendingDown },
   { path: "/assistant", label: "Assistente IA", icon: Bot },
   { path: "/admin", label: "Admin", icon: Settings },
 ];

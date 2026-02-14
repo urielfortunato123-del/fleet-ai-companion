@@ -10,6 +10,7 @@ import DailyOps from "@/pages/DailyOps";
 import Vehicles from "@/pages/Vehicles";
 import AIAssistant from "@/pages/AIAssistant";
 import PlaceholderPage from "@/components/PlaceholderPage";
+import OptimizationStudy from "@/pages/OptimizationStudy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/fines" element={<AppLayout><PlaceholderPage title="Multas & Documentos" description="Gestão de multas, vencimentos de documentos, upload e histórico." /></AppLayout>} />
           <Route path="/incidents" element={<AppLayout><PlaceholderPage title="Ocorrências" description="Registro de acidentes, panes e reboques com anexos." /></AppLayout>} />
           <Route path="/drivers" element={<AppLayout><PlaceholderPage title="Motoristas" description="Perfil, CNH, histórico de atribuições e multas." /></AppLayout>} />
+          <Route path="/optimization" element={<AppLayout><OptimizationStudy /></AppLayout>} />
           <Route path="/assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
           <Route path="/admin" element={<AppLayout><PlaceholderPage title="Administração" description="Gestão de usuários, permissões, unidades, centros de custo e templates." /></AppLayout>} />
           <Route path="*" element={<NotFound />} />
