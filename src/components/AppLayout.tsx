@@ -5,6 +5,7 @@ import {
   Users, Settings, Bot, CalendarClock, Menu, X, LogOut, ChevronLeft, TrendingDown, Gauge
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -116,6 +117,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex-1" />
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground hidden sm:inline">850 veículos</span>
+            <ThemeToggle />
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
               {user?.email?.substring(0, 2).toUpperCase() ?? "U"}
             </div>
