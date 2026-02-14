@@ -19,7 +19,7 @@ const quickActions = [
   { icon: FileText, label: "Relatório diretoria", prompt: "Gere um relatório executivo mensal para apresentação à diretoria." },
 ];
 
-const LM_STUDIO_URL = "http://localhost:1234/v1/chat/completions";
+const LM_STUDIO_URL = "http://192.168.1.119:1234/v1/chat/completions";
 
 const SYSTEM_PROMPT = `Você é o FrotaSênior AI, um analista sênior de gestão de frotas com 20 anos de experiência.
 Você ajuda gestores a tomar decisões inteligentes sobre manutenção, custos, consumo e otimização da frota.
