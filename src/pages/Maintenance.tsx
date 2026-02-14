@@ -224,6 +224,7 @@ export default function Maintenance() {
 function WorkOrdersTab({
   search, setSearch, status, setStatus, type, setType, unit, setUnit,
   units, filtered, paginated, page, setPage, totalPages, expandedWO, setExpandedWO, fmtCurrency,
+  onEdit, onDelete,
 }: {
   search: string; setSearch: (v: string) => void;
   status: string; setStatus: (v: string) => void;
