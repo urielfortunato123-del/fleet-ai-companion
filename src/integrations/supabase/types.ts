@@ -221,6 +221,48 @@ export type Database = {
         }
         Relationships: []
       }
+      telemetry_readings: {
+        Row: {
+          created_at: string
+          days_available: number
+          days_in_maintenance: number
+          id: string
+          km_end: number
+          km_start: number
+          km_total: number | null
+          month_ref: string
+          plate: string
+          unit: string
+          vehicle_label: string
+        }
+        Insert: {
+          created_at?: string
+          days_available?: number
+          days_in_maintenance?: number
+          id?: string
+          km_end?: number
+          km_start?: number
+          km_total?: number | null
+          month_ref: string
+          plate: string
+          unit?: string
+          vehicle_label?: string
+        }
+        Update: {
+          created_at?: string
+          days_available?: number
+          days_in_maintenance?: number
+          id?: string
+          km_end?: number
+          km_start?: number
+          km_total?: number | null
+          month_ref?: string
+          plate?: string
+          unit?: string
+          vehicle_label?: string
+        }
+        Relationships: []
+      }
       tires: {
         Row: {
           brand: string
@@ -333,6 +375,7 @@ export type Database = {
           created_at: string
           current_km: number
           driver: string | null
+          franchise_km: number
           fuel_avg: number
           health_score: number
           id: string
@@ -352,6 +395,7 @@ export type Database = {
           created_at?: string
           current_km?: number
           driver?: string | null
+          franchise_km?: number
           fuel_avg?: number
           health_score?: number
           id?: string
@@ -371,6 +415,7 @@ export type Database = {
           created_at?: string
           current_km?: number
           driver?: string | null
+          franchise_km?: number
           fuel_avg?: number
           health_score?: number
           id?: string
