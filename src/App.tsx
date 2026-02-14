@@ -13,6 +13,7 @@ import Maintenance from "@/pages/Maintenance";
 import FuelPage from "@/pages/FuelPage";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import OptimizationStudy from "@/pages/OptimizationStudy";
+import VehicleDetail from "@/pages/VehicleDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
           <Route path="/daily-ops" element={<AppLayout><DailyOps /></AppLayout>} />
           <Route path="/vehicles" element={<AppLayout><Vehicles /></AppLayout>} />
+          <Route path="/vehicles/:id" element={<AppLayout><VehicleDetail /></AppLayout>} />
           <Route path="/maintenance" element={<AppLayout><Maintenance /></AppLayout>} />
           <Route path="/fuel" element={<AppLayout><FuelPage /></AppLayout>} />
           <Route path="/tires" element={<AppLayout><PlaceholderPage title="Pneus" description="Vida útil, rodízio, custo por km e previsão de troca." /></AppLayout>} />
