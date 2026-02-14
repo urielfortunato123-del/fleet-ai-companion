@@ -160,7 +160,7 @@ export default function AIAssistant() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-foreground">Assistente IA</h1>
-            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — Mistral Small 3.1 24B (OpenRouter)</p>
+            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — GPT-5 Mini (OpenRouter)</p>
           </div>
         </div>
       </div>
