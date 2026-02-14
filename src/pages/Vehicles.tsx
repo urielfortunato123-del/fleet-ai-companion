@@ -1,12 +1,14 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
-import { vehiclesData, Vehicle } from "@/data/mockData";
+import { Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { useVehicles, useInsertVehicle, useUpdateVehicle, useDeleteVehicle } from "@/hooks/useSupabaseData";
+import { Tables } from "@/integrations/supabase/types";
 import StatusChip from "@/components/StatusChip";
 import HealthScore from "@/components/HealthScore";
 import CrudDialog, { DeleteDialog } from "@/components/CrudDialog";
 import { toast } from "sonner";
 
+type Vehicle = Tables<"vehicles">;
 const PAGE_SIZE = 20;
 
 const units = ["Matriz SP", "Filial RJ", "Filial MG", "Filial BA", "Filial PR", "Filial GO", "Filial AM", "Filial PE"];
@@ -24,14 +26,18 @@ const vehicleFields = [
   { name: "year", label: "Ano", type: "number" as const, required: true, placeholder: "2024" },
   { name: "unit", label: "Unidade", type: "select" as const, required: true, options: units.map(u => ({ value: u, label: u })) },
   { name: "status", label: "Status", type: "select" as const, required: true, options: statusOptions },
-  { name: "currentKm", label: "KM Atual", type: "number" as const, required: true, placeholder: "50000" },
+  { name: "current_km", label: "KM Atual", type: "number" as const, required: true, placeholder: "50000" },
   { name: "driver", label: "Motorista", placeholder: "Nome do motorista" },
-  { name: "fuelAvg", label: "Consumo (km/l)", type: "number" as const, placeholder: "9.5" },
-  { name: "costMonth", label: "Custo/Mês (R$)", type: "number" as const, placeholder: "2000" },
+  { name: "fuel_avg", label: "Consumo (km/l)", type: "number" as const, placeholder: "9.5" },
+  { name: "cost_month", label: "Custo/Mês (R$)", type: "number" as const, placeholder: "2000" },
 ];
 
 export default function Vehicles() {
-  const [data, setData] = useState<Vehicle[]>(() => [...vehiclesData]);
+  const { data: vehicles = [], isLoading } = useVehicles();
+  const insertVehicle = useInsertVehicle();
+  const updateVehicle = useUpdateVehicle();
+  const deleteVehicle = useDeleteVehicle();
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
@@ -41,7 +47,7 @@ export default function Vehicles() {
   const navigate = useNavigate();
 
   const filtered = useMemo(() => {
-    return data.filter((v) => {
+    return vehicles.filter((v) => {
       const matchSearch = !search || v.plate.toLowerCase().includes(search.toLowerCase()) ||
         v.model.toLowerCase().includes(search.toLowerCase()) ||
         v.brand.toLowerCase().includes(search.toLowerCase()) ||
@@ -50,47 +56,62 @@ export default function Vehicles() {
       const matchUnit = unitFilter === "all" || v.unit === unitFilter;
       return matchSearch && matchStatus && matchUnit;
     });
-  }, [data, search, statusFilter, unitFilter]);
+  }, [vehicles, search, statusFilter, unitFilter]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const allUnits = [...new Set(data.map(v => v.unit))];
+  const allUnits = [...new Set(vehicles.map(v => v.unit).filter(Boolean))];
 
-  const handleSave = (values: Record<string, any>) => {
-    if (dialog?.mode === "edit" && dialog.vehicle) {
-      setData(prev => prev.map(v => v.id === dialog.vehicle!.id ? { ...v, ...values } as Vehicle : v));
-      toast.success("Veículo atualizado com sucesso");
-    } else {
-      const newVehicle: Vehicle = {
-        id: String(Date.now()),
-        plate: values.plate,
-        brand: values.brand,
-        model: values.model,
-        year: Number(values.year),
-        unit: values.unit,
-        region: "Sudeste",
-        status: values.status as Vehicle["status"],
-        currentKm: Number(values.currentKm) || 0,
-        healthScore: 75,
-        costMonth: Number(values.costMonth) || 0,
-        fuelAvg: Number(values.fuelAvg) || 9,
-        lastMaintenance: new Date().toISOString().split("T")[0],
-        nextMaintenance: "2026-06-01",
-        driver: values.driver || undefined,
-      };
-      setData(prev => [newVehicle, ...prev]);
-      toast.success("Veículo cadastrado com sucesso");
+  const handleSave = async (values: Record<string, any>) => {
+    try {
+      if (dialog?.mode === "edit" && dialog.vehicle) {
+        await updateVehicle.mutateAsync({
+          id: dialog.vehicle.id,
+          plate: values.plate, brand: values.brand, model: values.model,
+          year: Number(values.year), unit: values.unit, status: values.status,
+          current_km: Number(values.current_km) || 0,
+          driver: values.driver || null,
+          fuel_avg: Number(values.fuel_avg) || 0,
+          cost_month: Number(values.cost_month) || 0,
+        });
+        toast.success("Veículo atualizado com sucesso");
+      } else {
+        await insertVehicle.mutateAsync({
+          plate: values.plate, brand: values.brand, model: values.model,
+          year: Number(values.year), unit: values.unit || "Matriz SP",
+          status: values.status || "active",
+          current_km: Number(values.current_km) || 0,
+          driver: values.driver || null,
+          fuel_avg: Number(values.fuel_avg) || 9,
+          cost_month: Number(values.cost_month) || 0,
+        });
+        toast.success("Veículo cadastrado com sucesso");
+      }
+      setDialog(null);
+    } catch (err: any) {
+      toast.error(err.message);
     }
-    setDialog(null);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteTarget) {
-      setData(prev => prev.filter(v => v.id !== deleteTarget.id));
-      toast.success(`Veículo ${deleteTarget.plate} excluído`);
-      setDeleteTarget(null);
+      try {
+        await deleteVehicle.mutateAsync(deleteTarget.id);
+        toast.success(`Veículo ${deleteTarget.plate} excluído`);
+        setDeleteTarget(null);
+      } catch (err: any) {
+        toast.error(err.message);
+      }
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-info" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6 space-y-4">
@@ -158,10 +179,10 @@ export default function Vehicles() {
                   <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{v.unit}</td>
                   <td className="px-4 py-3"><StatusChip status={v.status} /></td>
                   <td className="px-4 py-3 hidden md:table-cell">
-                    <div className="flex justify-center"><HealthScore score={v.healthScore} /></div>
+                    <div className="flex justify-center"><HealthScore score={v.health_score} /></div>
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-muted-foreground hidden lg:table-cell">{v.currentKm.toLocaleString("pt-BR")}</td>
-                  <td className="px-4 py-3 text-right font-medium text-foreground hidden sm:table-cell">R$ {v.costMonth.toLocaleString("pt-BR")}</td>
+                  <td className="px-4 py-3 text-right font-mono text-muted-foreground hidden lg:table-cell">{v.current_km.toLocaleString("pt-BR")}</td>
+                  <td className="px-4 py-3 text-right font-medium text-foreground hidden sm:table-cell">R$ {Number(v.cost_month).toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={(e) => { e.stopPropagation(); setDialog({ mode: "edit", vehicle: v }); }}
@@ -180,28 +201,29 @@ export default function Vehicles() {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/30">
-          <span className="text-xs text-muted-foreground">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}</span>
-          <div className="flex gap-1">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="rounded-md p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const pageNum = page <= 3 ? i + 1 : page + i - 2;
-              if (pageNum < 1 || pageNum > totalPages) return null;
-              return (
-                <button key={pageNum} onClick={() => setPage(pageNum)}
-                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${pageNum === page ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
-                  {pageNum}
-                </button>
-              );
-            })}
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="rounded-md p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30">
-              <ChevronRight className="h-4 w-4" />
-            </button>
+        {filtered.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/30">
+            <span className="text-xs text-muted-foreground">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}</span>
+            <div className="flex gap-1">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="rounded-md p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = page <= 3 ? i + 1 : page + i - 2;
+                if (pageNum < 1 || pageNum > totalPages) return null;
+                return (
+                  <button key={pageNum} onClick={() => setPage(pageNum)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${pageNum === page ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
+                    {pageNum}
+                  </button>
+                );
+              })}
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="rounded-md p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Dialogs */}
