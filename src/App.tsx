@@ -11,6 +11,7 @@ import Vehicles from "@/pages/Vehicles";
 import AIAssistant from "@/pages/AIAssistant";
 import Maintenance from "@/pages/Maintenance";
 import FuelPage from "@/pages/FuelPage";
+import TiresPage from "@/pages/TiresPage";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import OptimizationStudy from "@/pages/OptimizationStudy";
 import VehicleDetail from "@/pages/VehicleDetail";
@@ -32,7 +33,7 @@ const App = () => (
           <Route path="/vehicles/:id" element={<AppLayout><VehicleDetail /></AppLayout>} />
           <Route path="/maintenance" element={<AppLayout><Maintenance /></AppLayout>} />
           <Route path="/fuel" element={<AppLayout><FuelPage /></AppLayout>} />
-          <Route path="/tires" element={<AppLayout><PlaceholderPage title="Pneus" description="Vida útil, rodízio, custo por km e previsão de troca." /></AppLayout>} />
+          <Route path="/tires" element={<AppLayout><TiresPage /></AppLayout>} />
           <Route path="/fines" element={<AppLayout><PlaceholderPage title="Multas & Documentos" description="Gestão de multas, vencimentos de documentos, upload e histórico." /></AppLayout>} />
           <Route path="/incidents" element={<AppLayout><PlaceholderPage title="Ocorrências" description="Registro de acidentes, panes e reboques com anexos." /></AppLayout>} />
           <Route path="/drivers" element={<AppLayout><PlaceholderPage title="Motoristas" description="Perfil, CNH, histórico de atribuições e multas." /></AppLayout>} />
