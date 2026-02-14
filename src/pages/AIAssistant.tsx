@@ -19,7 +19,12 @@ const quickActions = [
   { icon: FileText, label: "Relatório diretoria", prompt: "Gere um relatório executivo mensal para apresentação à diretoria." },
 ];
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/huggingface-chat`;
+const LM_STUDIO_URL = "http://localhost:1234/v1/chat/completions";
+
+const SYSTEM_PROMPT = `Você é o FrotaSênior AI, um analista sênior de gestão de frotas com 20 anos de experiência.
+Você ajuda gestores a tomar decisões inteligentes sobre manutenção, custos, consumo e otimização da frota.
+Responda sempre em português brasileiro, de forma objetiva e com dados quando possível.
+Use formatação markdown para organizar suas respostas.`;
 
 export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -54,20 +59,20 @@ export default function AIAssistant() {
     };
 
     try {
-      const resp = await fetch(CHAT_URL, {
+      const resp = await fetch(LM_STUDIO_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...updatedMessages.map(m => ({ role: m.role, content: m.content })),
+          ],
+          stream: true,
         }),
       });
 
       if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
-        toast.error(err.error || `Erro ${resp.status}`);
+        toast.error(`Erro ${resp.status} — Verifique se o LM Studio está rodando em localhost:1234`);
         setIsLoading(false);
         return;
       }
@@ -137,7 +142,7 @@ export default function AIAssistant() {
       }
     } catch (e) {
       console.error("Chat error:", e);
-      toast.error("Erro ao conectar com a IA. Verifique sua conexão.");
+      toast.error("Erro ao conectar com o LM Studio. Verifique se está rodando em localhost:1234.");
     }
 
     setIsLoading(false);
@@ -153,7 +158,7 @@ export default function AIAssistant() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-foreground">Assistente IA</h1>
-            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — Lovable AI</p>
+            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — LM Studio (local)</p>
           </div>
         </div>
       </div>
