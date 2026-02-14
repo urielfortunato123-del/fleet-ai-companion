@@ -14,6 +14,23 @@ serve(async (req) => {
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
+    const systemMessage = {
+      role: "system",
+      content: `Você é o FrotaSênior AI, um analista sênior de gestão de frotas com 20 anos de experiência.
+Você ajuda gestores a tomar decisões inteligentes sobre manutenção, custos, consumo e otimização da frota.
+Responda sempre em português brasileiro, de forma objetiva e com dados quando possível.
+Use formatação markdown para organizar suas respostas.`,
+    };
+
+    // Preserve reasoning_details from assistant messages
+    const formattedMessages = messages.map((m: any) => {
+      const msg: any = { role: m.role, content: m.content };
+      if (m.role === "assistant" && m.reasoning_details) {
+        msg.reasoning_details = m.reasoning_details;
+      }
+      return msg;
+    });
+
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -22,16 +39,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "openai/gpt-oss-120b:free",
-        messages: [
-          {
-            role: "system",
-            content: `Você é o FrotaSênior AI, um analista sênior de gestão de frotas com 20 anos de experiência.
-Você ajuda gestores a tomar decisões inteligentes sobre manutenção, custos, consumo e otimização da frota.
-Responda sempre em português brasileiro, de forma objetiva e com dados quando possível.
-Use formatação markdown para organizar suas respostas.`,
-          },
-          ...messages,
-        ],
+        messages: [systemMessage, ...formattedMessages],
+        reasoning: { enabled: true },
         stream: true,
         temperature: 0.7,
         max_tokens: 2048,
@@ -43,13 +52,11 @@ Use formatação markdown para organizar suas respostas.`,
       console.error("OpenRouter error:", response.status, t);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -59,8 +66,7 @@ Use formatação markdown para organizar suas respostas.`,
   } catch (e) {
     console.error("openrouter-chat error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
