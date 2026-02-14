@@ -12,92 +12,62 @@ serve(async (req) => {
   }
 
   try {
-    const HF_API_KEY = Deno.env.get("HUGGINGFACE_API_KEY");
-    if (!HF_API_KEY) {
-      throw new Error("HUGGINGFACE_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { messages, model } = await req.json();
+    const { messages } = await req.json();
 
-    const systemPrompt = `Você é o FrotaSênior AI, um analista sênior de gestão de frotas de veículos. 
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content: `Você é o FrotaSênior AI, um analista sênior de gestão de frotas de veículos.
 Você ajuda gestores de frota com análises, relatórios, recomendações de manutenção, otimização de custos, controle de combustível, pneus, multas e motoristas.
 Responda sempre em português brasileiro. Use markdown para formatar suas respostas.
-Seja direto, profissional e baseado em dados quando possível.`;
+Seja direto, profissional e baseado em dados quando possível.
+Quando não tiver dados reais, forneça exemplos realistas e recomendações baseadas em melhores práticas do setor.`,
+          },
+          ...messages,
+        ],
+        stream: true,
+      }),
+    });
 
-    const hfMessages = [
-      { role: "system", content: systemPrompt },
-      ...messages,
-    ];
-
-    // Models to try in order of preference
-    const modelsToTry = model 
-      ? [model] 
-      : [
-          "Qwen/Qwen2.5-72B-Instruct",
-          "meta-llama/Llama-3.1-8B-Instruct",
-          "mistralai/Mistral-7B-Instruct-v0.3",
-          "microsoft/Phi-3-mini-4k-instruct",
-        ];
-
-    let lastError = "";
-
-    for (const hfModel of modelsToTry) {
-      // Use the new router endpoint
-      const url = `https://router.huggingface.co/hf-inference/models/${hfModel}/v1/chat/completions`;
-      
-      console.log(`Trying model: ${hfModel} at ${url}`);
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${HF_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: hfModel,
-          messages: hfMessages,
-          max_tokens: 2048,
-          stream: true,
-        }),
-      });
-
-      if (response.ok) {
-        console.log(`Success with model: ${hfModel}`);
-        return new Response(response.body, {
-          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-        });
-      }
-
-      const errorText = await response.text();
-      lastError = `${hfModel}: ${response.status} - ${errorText.slice(0, 150)}`;
-      console.log(`Model ${hfModel} failed: ${response.status}`);
-
+    if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }),
+          JSON.stringify({ error: "Rate limit excedido. Tente novamente em alguns segundos." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 401 || response.status === 403) {
-        return new Response(
-          JSON.stringify({ error: "API key inválida ou sem permissão." }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Créditos insuficientes na Hugging Face. Verifique seu plano." }),
+          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos em Settings > Workspace > Usage." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      const t = await response.text();
+      console.error("AI gateway error:", response.status, t);
+      return new Response(
+        JSON.stringify({ error: "Erro no gateway de IA" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    return new Response(
-      JSON.stringify({ error: `Nenhum modelo disponível. Último erro: ${lastError}` }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(response.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    });
   } catch (e) {
-    console.error("huggingface-chat error:", e);
+    console.error("chat error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

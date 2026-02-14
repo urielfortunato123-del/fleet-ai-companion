@@ -153,7 +153,7 @@ export default function AIAssistant() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-foreground">Assistente IA</h1>
-            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — Hugging Face AI</p>
+            <p className="text-xs text-muted-foreground">Analista Sênior de Frota — Lovable AI</p>
           </div>
         </div>
       </div>
@@ -168,7 +168,7 @@ export default function AIAssistant() {
             <div className="text-center space-y-2">
               <h2 className="text-xl font-bold text-foreground">Como posso ajudar?</h2>
               <p className="text-sm text-muted-foreground max-w-md">
-                Sou seu analista sênior de frota com IA da Hugging Face.
+                Sou seu analista sênior de frota com IA integrada.
                 Consulto dados e gero relatórios, priorizo ações e recomendo melhorias.
               </p>
             </div>
@@ -221,7 +221,7 @@ export default function AIAssistant() {
           <div className="flex justify-start animate-slide-in">
             <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-2">
               <Loader2 className="h-4 w-4 text-info animate-spin" />
-              <span className="text-xs text-muted-foreground">Analisando com Hugging Face...</span>
+              <span className="text-xs text-muted-foreground">Analisando dados da frota...</span>
             </div>
           </div>
         )}
