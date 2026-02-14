@@ -63,11 +63,14 @@ export default function AIAssistant() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          model: "gemma-3-4b",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             ...updatedMessages.map(m => ({ role: m.role, content: m.content })),
           ],
           stream: true,
+          temperature: 0.7,
+          max_tokens: 2048,
         }),
       });
 
