@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Bot, Send, Calendar, TrendingUp, AlertTriangle, BarChart3,
-  GitCompare, FileText, Loader2, Sparkles
+  GitCompare, FileText, Loader2, Sparkles, Paperclip, X, Image, FileSpreadsheet
 } from "lucide-react";
 import { toast } from "sonner";
+import { useChatFileUpload } from "@/hooks/useChatFileUpload";
 
 interface Message {
   role: "user" | "assistant";
-  content: string;
+  content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+  displayContent?: string;
+  attachments?: Array<{ name: string; type: string; previewUrl?: string }>;
 }
 
 const quickActions = [
@@ -21,32 +24,60 @@ const quickActions = [
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/openrouter-chat`;
 
-// System prompt is defined in the edge function
-
 export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const {
+    attachments, isUploading, fileInputRef,
+    handleFiles, removeAttachment, clearAttachments,
+    buildMessageContent, getImageUrls,
+  } = useChatFileUpload();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+    if ((!text.trim() && attachments.length === 0) || isLoading) return;
 
-    const userMsg: Message = { role: "user", content: text };
+    const imageUrls = getImageUrls();
+    const finalText = buildMessageContent(text);
+
+    // Build content for API (multimodal if images)
+    let apiContent: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+    if (imageUrls.length > 0) {
+      apiContent = [
+        { type: "text", text: finalText },
+        ...imageUrls.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+      ];
+    } else {
+      apiContent = finalText;
+    }
+
+    const userMsg: Message = {
+      role: "user",
+      content: apiContent,
+      displayContent: text,
+      attachments: attachments.map((a) => ({
+        name: a.name,
+        type: a.type,
+        previewUrl: a.previewUrl,
+      })),
+    };
+
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setInput("");
+    clearAttachments();
     setIsLoading(true);
 
     let assistantSoFar = "";
 
     const upsertAssistant = (chunk: string) => {
       assistantSoFar += chunk;
-      setMessages(prev => {
+      setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last?.role === "assistant") {
           return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
@@ -63,7 +94,7 @@ export default function AIAssistant() {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+          messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
 
@@ -105,10 +136,7 @@ export default function AIAssistant() {
           if (!line.startsWith("data: ")) continue;
 
           const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") {
-            streamDone = true;
-            break;
-          }
+          if (jsonStr === "[DONE]") { streamDone = true; break; }
 
           try {
             const parsed = JSON.parse(jsonStr);
@@ -121,7 +149,6 @@ export default function AIAssistant() {
         }
       }
 
-      // Final flush
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split("\n")) {
           if (!raw) continue;
@@ -138,7 +165,6 @@ export default function AIAssistant() {
         }
       }
 
-      // If no content was streamed, show fallback
       if (!assistantSoFar) {
         upsertAssistant("Desculpe, não consegui gerar uma resposta. Tente novamente.");
       }
@@ -148,6 +174,22 @@ export default function AIAssistant() {
     }
 
     setIsLoading(false);
+  };
+
+  const getDisplayText = (msg: Message): string => {
+    if (msg.displayContent) return msg.displayContent;
+    if (typeof msg.content === "string") return msg.content;
+    const textPart = msg.content.find((p) => p.type === "text");
+    return textPart?.text || "";
+  };
+
+  const renderFileIcon = (type: string) => {
+    switch (type) {
+      case "image": return <Image className="h-3 w-3" />;
+      case "excel": return <FileSpreadsheet className="h-3 w-3" />;
+      case "pdf": return <FileText className="h-3 w-3" />;
+      default: return <Paperclip className="h-3 w-3" />;
+    }
   };
 
   return (
@@ -205,9 +247,27 @@ export default function AIAssistant() {
                 ? "bg-primary text-primary-foreground rounded-br-md"
                 : "bg-card border border-border text-card-foreground rounded-bl-md"}`}
             >
+              {/* Attachment previews for user messages */}
+              {msg.role === "user" && msg.attachments && msg.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {msg.attachments.map((att, j) => (
+                    <div key={j}>
+                      {att.type === "image" && att.previewUrl ? (
+                        <img src={att.previewUrl} alt={att.name} className="max-h-32 rounded-lg" />
+                      ) : (
+                        <div className="flex items-center gap-1.5 rounded-lg bg-primary-foreground/20 px-2 py-1 text-xs">
+                          {renderFileIcon(att.type)}
+                          <span className="truncate max-w-[120px]">{att.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {msg.role === "assistant" ? (
                 <div className="prose prose-sm max-w-none text-card-foreground [&_h2]:text-base [&_h2]:font-bold [&_h2]:mt-2 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_ol]:space-y-2 [&_li]:leading-relaxed [&_strong]:text-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-info [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_blockquote]:italic [&_em]:text-muted-foreground">
-                  {msg.content.split('\n').map((line, j) => {
+                  {getDisplayText(msg).split('\n').map((line, j) => {
                     if (line.startsWith('## ')) return <h2 key={j}>{line.replace('## ', '')}</h2>;
                     if (line.startsWith('### ')) return <h3 key={j}>{line.replace('### ', '')}</h3>;
                     if (line.startsWith('> ')) return <blockquote key={j}><p>{line.replace('> ', '')}</p></blockquote>;
@@ -218,7 +278,7 @@ export default function AIAssistant() {
                   })}
                 </div>
               ) : (
-                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <p className="whitespace-pre-wrap">{getDisplayText(msg)}</p>
               )}
             </div>
           </div>
@@ -235,12 +295,50 @@ export default function AIAssistant() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Attachment Preview */}
+      {attachments.length > 0 && (
+        <div className="border-t border-border bg-muted/30 px-4 py-2">
+          <div className="flex flex-wrap gap-2 max-w-4xl mx-auto">
+            {attachments.map((att, i) => (
+              <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs">
+                {att.type === "image" && att.previewUrl ? (
+                  <img src={att.previewUrl} alt={att.name} className="h-8 w-8 rounded object-cover" />
+                ) : (
+                  renderFileIcon(att.type)
+                )}
+                <span className="truncate max-w-[120px] text-foreground">{att.name}</span>
+                <button onClick={() => removeAttachment(i)} className="text-muted-foreground hover:text-destructive">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="border-t border-border bg-card p-4">
         <form
           onSubmit={(e) => { e.preventDefault(); sendMessage(input); }}
           className="flex gap-2 max-w-4xl mx-auto"
         >
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            multiple
+            accept=".jpg,.jpeg,.png,.gif,.webp,.xlsx,.xls,.csv,.pdf"
+            onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading || isUploading}
+            className="rounded-xl border border-input bg-background p-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-30"
+            title="Anexar arquivo (Excel, PDF, Imagem)"
+          >
+            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+          </button>
           <input
             type="text"
             value={input}
@@ -251,7 +349,7 @@ export default function AIAssistant() {
           />
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
+            disabled={(!input.trim() && attachments.length === 0) || isLoading}
             className="rounded-xl bg-primary p-3 text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-30"
           >
             <Send className="h-4 w-4" />
