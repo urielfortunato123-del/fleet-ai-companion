@@ -2,8 +2,10 @@ import { useState, useMemo, useCallback } from "react";
 import {
   Fuel, Search, ChevronLeft, ChevronRight, Upload, FileSpreadsheet,
   DollarSign, Gauge, TrendingDown, TrendingUp, AlertTriangle,
-  CheckCircle2, XCircle, BarChart3, ArrowUpDown
+  CheckCircle2, XCircle, BarChart3, ArrowUpDown, Plus, Pencil, Trash2
 } from "lucide-react";
+import CrudDialog, { DeleteDialog } from "@/components/CrudDialog";
+import { toast } from "sonner";
 import KPICard from "@/components/KPICard";
 import {
   fuelLogs, vehicleConsumptions, monthlyFuelTrend, deviationBuckets,
@@ -69,18 +71,21 @@ export default function FuelPage() {
 
 /* ====== LOGS TAB ====== */
 function LogsTab() {
+  const [data, setData] = useState<FuelLog[]>(() => [...fuelLogs]);
   const [search, setSearch] = useState("");
   const [unitFilter, setUnitFilter] = useState("all");
   const [fuelTypeFilter, setFuelTypeFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<keyof FuelLog>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [dialog, setDialog] = useState<{ mode: "create" | "edit"; item?: FuelLog } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FuelLog | null>(null);
 
   const units = [...new Set(fuelLogs.map(l => l.unit))];
   const fuelTypes = [...new Set(fuelLogs.map(l => l.fuelType))];
 
   const filtered = useMemo(() => {
-    let result = fuelLogs.filter(l => {
+    let result = data.filter(l => {
       const matchSearch = !search ||
         l.plate.toLowerCase().includes(search.toLowerCase()) ||
         l.driver.toLowerCase().includes(search.toLowerCase()) ||
@@ -96,7 +101,7 @@ function LogsTab() {
       return sortDir === "asc" ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
     });
     return result;
-  }, [search, unitFilter, fuelTypeFilter, sortField, sortDir]);
+  }, [data, search, unitFilter, fuelTypeFilter, sortField, sortDir]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -115,6 +120,49 @@ function LogsTab() {
       </div>
     </th>
   );
+
+  const fuelFields = [
+    { name: "date", label: "Data", type: "date" as const, required: true },
+    { name: "plate", label: "Placa", required: true, placeholder: "ABC1D23" },
+    { name: "driver", label: "Motorista", required: true, placeholder: "Nome" },
+    { name: "liters", label: "Litros", type: "number" as const, required: true },
+    { name: "value", label: "Valor (R$)", type: "number" as const, required: true },
+    { name: "km", label: "KM", type: "number" as const, required: true },
+    { name: "consumption", label: "Consumo (km/l)", type: "number" as const },
+    { name: "station", label: "Posto", placeholder: "Nome do posto" },
+    { name: "fuelType", label: "Combustível", type: "select" as const, options: [
+      { value: "Gasolina", label: "Gasolina" }, { value: "Etanol", label: "Etanol" }, { value: "Diesel", label: "Diesel" }, { value: "Diesel S-10", label: "Diesel S-10" },
+    ]},
+  ];
+
+  const handleSave = (values: Record<string, any>) => {
+    if (dialog?.mode === "edit" && dialog.item) {
+      setData(prev => prev.map(l => l.id === dialog.item!.id ? { ...l, ...values } as FuelLog : l));
+      toast.success("Abastecimento atualizado");
+    } else {
+      const newLog: FuelLog = {
+        id: String(Date.now()),
+        date: values.date, plate: values.plate, driver: values.driver,
+        liters: Number(values.liters), value: Number(values.value),
+        km: Number(values.km), consumption: Number(values.consumption) || 0,
+        station: values.station || "", fuelType: values.fuelType || "Gasolina",
+        unit: "Matriz SP", vehicleLabel: values.plate,
+        vehicle_id: "", pricePerLiter: Number(values.value) / (Number(values.liters) || 1),
+        previousKm: 0, kmDriven: 0,
+      };
+      setData(prev => [newLog, ...prev]);
+      toast.success("Abastecimento cadastrado");
+    }
+    setDialog(null);
+  };
+
+  const handleDelete = () => {
+    if (deleteTarget) {
+      setData(prev => prev.filter(l => l.id !== deleteTarget.id));
+      toast.success("Abastecimento excluído");
+      setDeleteTarget(null);
+    }
+  };
 
   return (
     <div className="space-y-4 animate-slide-in">
@@ -135,6 +183,10 @@ function LogsTab() {
           <option value="all">Todos combustíveis</option>
           {fuelTypes.map(f => <option key={f} value={f}>{f}</option>)}
         </select>
+        <button onClick={() => setDialog({ mode: "create" })}
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">
+          <Plus className="h-4 w-4" /> Novo
+        </button>
       </div>
 
       <p className="text-xs text-muted-foreground">{filtered.length} registros</p>
@@ -151,7 +203,7 @@ function LogsTab() {
                 <SortHeader field="value" label="Valor" className="text-right hidden sm:table-cell" />
                 <SortHeader field="consumption" label="km/l" className="text-right" />
                 <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Posto</th>
-                <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden xl:table-cell">Tipo</th>
+                <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -171,8 +223,13 @@ function LogsTab() {
                     </span>
                   </td>
                   <td className="px-3 py-2.5 text-xs text-muted-foreground hidden lg:table-cell truncate max-w-[150px]">{log.station}</td>
-                  <td className="px-3 py-2.5 hidden xl:table-cell">
-                    <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{log.fuelType}</span>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => setDialog({ mode: "edit", item: log })}
+                        className="rounded-md p-1.5 text-muted-foreground hover:text-info hover:bg-info/10 transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => setDeleteTarget(log)}
+                        className="rounded-md p-1.5 text-muted-foreground hover:text-critical hover:bg-critical/10 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -181,6 +238,16 @@ function LogsTab() {
         </div>
         <Pagination page={page} setPage={setPage} totalPages={totalPages} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
+
+      {dialog && (
+        <CrudDialog title={dialog.mode === "create" ? "Novo Abastecimento" : "Editar Abastecimento"}
+          fields={fuelFields} initialValues={dialog.item || {}} onSave={handleSave} onClose={() => setDialog(null)} />
+      )}
+      {deleteTarget && (
+        <DeleteDialog title="Excluir Abastecimento"
+          message={`Excluir abastecimento de ${deleteTarget.plate} em ${new Date(deleteTarget.date).toLocaleDateString("pt-BR")}?`}
+          onConfirm={handleDelete} onClose={() => setDeleteTarget(null)} />
+      )}
     </div>
   );
 }

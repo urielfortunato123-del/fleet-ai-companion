@@ -2,8 +2,10 @@ import { useState, useMemo } from "react";
 import {
   Wrench, Search, ChevronLeft, ChevronRight, Filter, Clock,
   CheckCircle2, XCircle, AlertCircle, DollarSign, Gauge, Calendar,
-  FileText, ChevronDown, ChevronUp, Package, MapPin
+  FileText, ChevronDown, ChevronUp, Package, MapPin, Plus, Pencil, Trash2
 } from "lucide-react";
+import CrudDialog, { DeleteDialog } from "@/components/CrudDialog";
+import { toast } from "sonner";
 import KPICard from "@/components/KPICard";
 import StatusChip from "@/components/StatusChip";
 import {
@@ -30,6 +32,7 @@ const PAGE_SIZE = 15;
 
 export default function Maintenance() {
   const [tab, setTab] = useState<Tab>("work-orders");
+  const [woData, setWoData] = useState<WorkOrder[]>(() => [...workOrders]);
   const [woSearch, setWoSearch] = useState("");
   const [woStatus, setWoStatus] = useState("all");
   const [woType, setWoType] = useState("all");
@@ -38,10 +41,12 @@ export default function Maintenance() {
   const [expandedWO, setExpandedWO] = useState<string | null>(null);
   const [schedFilter, setSchedFilter] = useState("all");
   const [schedSearch, setSchedSearch] = useState("");
+  const [woDialog, setWoDialog] = useState<{ mode: "create" | "edit"; item?: WorkOrder } | null>(null);
+  const [woDeleteTarget, setWoDeleteTarget] = useState<WorkOrder | null>(null);
 
   // Work Orders filtering
   const filteredWOs = useMemo(() => {
-    return workOrders.filter(w => {
+    return woData.filter(w => {
       const matchSearch = !woSearch ||
         w.id.toLowerCase().includes(woSearch.toLowerCase()) ||
         w.plate.toLowerCase().includes(woSearch.toLowerCase()) ||
@@ -52,7 +57,7 @@ export default function Maintenance() {
       const matchUnit = woUnit === "all" || w.unit === woUnit;
       return matchSearch && matchStatus && matchType && matchUnit;
     });
-  }, [woSearch, woStatus, woType, woUnit]);
+  }, [woData, woSearch, woStatus, woType, woUnit]);
 
   const woTotalPages = Math.ceil(filteredWOs.length / PAGE_SIZE);
   const paginatedWOs = filteredWOs.slice((woPage - 1) * PAGE_SIZE, woPage * PAGE_SIZE);
@@ -77,13 +82,60 @@ export default function Maintenance() {
     { id: "schedule", label: "Agenda Preventiva", count: scheduledServices.length },
     { id: "plans", label: "Planos de Manutenção", count: maintenancePlans.length },
   ];
+  const woFields = [
+    { name: "plate", label: "Placa", required: true, placeholder: "ABC1D23" },
+    { name: "description", label: "Descrição", required: true, placeholder: "Troca de óleo e filtro" },
+    { name: "type", label: "Tipo", type: "select" as const, required: true, options: [{ value: "preventive", label: "Preventiva" }, { value: "corrective", label: "Corretiva" }] },
+    { name: "status", label: "Status", type: "select" as const, required: true, options: [{ value: "open", label: "Aberta" }, { value: "in_progress", label: "Em andamento" }, { value: "done", label: "Concluída" }, { value: "canceled", label: "Cancelada" }] },
+    { name: "supplier", label: "Fornecedor", placeholder: "Nome do fornecedor" },
+    { name: "cost_total", label: "Custo Total (R$)", type: "number" as const },
+    { name: "km_at_service", label: "KM no Serviço", type: "number" as const },
+    { name: "opened_at", label: "Data Abertura", type: "date" as const, required: true },
+  ];
+
+  const handleWoSave = (values: Record<string, any>) => {
+    if (woDialog?.mode === "edit" && woDialog.item) {
+      setWoData(prev => prev.map(w => w.id === woDialog.item!.id ? { ...w, ...values } as WorkOrder : w));
+      toast.success("OS atualizada");
+    } else {
+      const newWO: WorkOrder = {
+        id: `OS-${Date.now().toString().slice(-6)}`,
+        vehicle_id: "", plate: values.plate, vehicleLabel: values.plate, unit: "Matriz SP",
+        description: values.description, type: values.type as "preventive" | "corrective",
+        status: values.status, priority: "medium" as const,
+        supplier: values.supplier || "", cost_total: Number(values.cost_total) || 0,
+        km_at_service: Number(values.km_at_service) || 0,
+        opened_at: values.opened_at || new Date().toISOString().split("T")[0],
+        closed_at: null, parts: [],
+      };
+      setWoData(prev => [newWO, ...prev]);
+      toast.success("OS criada com sucesso");
+    }
+    setWoDialog(null);
+  };
+
+  const handleWoDelete = () => {
+    if (woDeleteTarget) {
+      setWoData(prev => prev.filter(w => w.id !== woDeleteTarget.id));
+      toast.success(`OS ${woDeleteTarget.id} excluída`);
+      setWoDeleteTarget(null);
+    }
+  };
 
   return (
     <div className="p-4 lg:p-6 space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Manutenção</h1>
-        <p className="text-sm text-muted-foreground">Gestão de ordens de serviço, agenda preventiva e planos de manutenção</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Manutenção</h1>
+          <p className="text-sm text-muted-foreground">Gestão de ordens de serviço, agenda preventiva e planos de manutenção</p>
+        </div>
+        {tab === "work-orders" && (
+          <button onClick={() => setWoDialog({ mode: "create" })}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">
+            <Plus className="h-4 w-4" /> Nova OS
+          </button>
+        )}
       </div>
 
       {/* KPIs */}
@@ -138,6 +190,8 @@ export default function Maintenance() {
           totalPages={woTotalPages}
           expandedWO={expandedWO} setExpandedWO={setExpandedWO}
           fmtCurrency={fmtCurrency}
+          onEdit={(wo) => setWoDialog({ mode: "edit", item: wo })}
+          onDelete={(wo) => setWoDeleteTarget(wo)}
         />
       )}
 
@@ -151,6 +205,17 @@ export default function Maintenance() {
       )}
 
       {tab === "plans" && <PlansTab plans={maintenancePlans} />}
+
+      {/* CRUD Dialogs */}
+      {woDialog && (
+        <CrudDialog title={woDialog.mode === "create" ? "Nova Ordem de Serviço" : `Editar ${woDialog.item?.id}`}
+          fields={woFields} initialValues={woDialog.item || {}} onSave={handleWoSave} onClose={() => setWoDialog(null)} />
+      )}
+      {woDeleteTarget && (
+        <DeleteDialog title="Excluir OS"
+          message={`Excluir a ordem de serviço ${woDeleteTarget.id} (${woDeleteTarget.plate})?`}
+          onConfirm={handleWoDelete} onClose={() => setWoDeleteTarget(null)} />
+      )}
     </div>
   );
 }
@@ -171,6 +236,8 @@ function WorkOrdersTab({
   totalPages: number;
   expandedWO: string | null; setExpandedWO: (v: string | null) => void;
   fmtCurrency: (v: number) => string;
+  onEdit: (wo: WorkOrder) => void;
+  onDelete: (wo: WorkOrder) => void;
 }) {
   return (
     <div className="space-y-4 animate-slide-in">
@@ -246,6 +313,12 @@ function WorkOrdersTab({
                   <p className="text-[11px] text-muted-foreground">{new Date(wo.opened_at).toLocaleDateString("pt-BR")}</p>
                 </div>
 
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={(e) => { e.stopPropagation(); onEdit(wo); }}
+                    className="rounded-md p-1.5 text-muted-foreground hover:text-info hover:bg-info/10 transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(wo); }}
+                    className="rounded-md p-1.5 text-muted-foreground hover:text-critical hover:bg-critical/10 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
                 {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
               </button>
 
