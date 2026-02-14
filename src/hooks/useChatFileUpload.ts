@@ -79,10 +79,17 @@ export function useChatFileUpload() {
     setIsUploading(true);
     const newAttachments: FileAttachment[] = [];
 
-    for (const file of Array.from(files)) {
+    const fileArray = Array.from(files);
+    if (fileArray.length + attachments.length > 10) {
+      toast.error("Máximo de 10 arquivos por vez.");
+      setIsUploading(false);
+      return;
+    }
+
+    for (const file of fileArray) {
       const type = getFileType(file);
       if (!type) { toast.error(`Tipo não suportado: ${file.name}`); continue; }
-      if (file.size > 20 * 1024 * 1024) { toast.error(`Arquivo muito grande: ${file.name} (máx 20MB)`); continue; }
+      if (file.size > 400 * 1024 * 1024) { toast.error(`Arquivo muito grande: ${file.name} (máx 400MB)`); continue; }
 
       try {
         if (type === "image") {
