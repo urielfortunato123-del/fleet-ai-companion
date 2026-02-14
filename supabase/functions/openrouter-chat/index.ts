@@ -38,7 +38,7 @@ Use formatação markdown para organizar suas respostas.`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "mistralai/mistral-small-3.1-24b-instruct:free",
+        model: "openai/gpt-5-mini",
         messages: [systemMessage, ...formattedMessages],
         stream: true,
         temperature: 0.7,
