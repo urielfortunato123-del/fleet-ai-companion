@@ -3,7 +3,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import AppLayout from "@/components/AppLayout";
+import Login from "@/pages/Login";
+import Dashboard from "@/pages/Dashboard";
+import DailyOps from "@/pages/DailyOps";
+import Vehicles from "@/pages/Vehicles";
+import AIAssistant from "@/pages/AIAssistant";
+import PlaceholderPage from "@/components/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -15,8 +21,18 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
+          <Route path="/daily-ops" element={<AppLayout><DailyOps /></AppLayout>} />
+          <Route path="/vehicles" element={<AppLayout><Vehicles /></AppLayout>} />
+          <Route path="/maintenance" element={<AppLayout><PlaceholderPage title="Manutenção" description="Planos de manutenção, agenda de serviços, ordens de serviço e gestão de fornecedores." /></AppLayout>} />
+          <Route path="/fuel" element={<AppLayout><PlaceholderPage title="Combustível" description="Importação CSV/Excel, consumo médio por veículo, desvios e ranking de eficiência." /></AppLayout>} />
+          <Route path="/tires" element={<AppLayout><PlaceholderPage title="Pneus" description="Vida útil, rodízio, custo por km e previsão de troca." /></AppLayout>} />
+          <Route path="/fines" element={<AppLayout><PlaceholderPage title="Multas & Documentos" description="Gestão de multas, vencimentos de documentos, upload e histórico." /></AppLayout>} />
+          <Route path="/incidents" element={<AppLayout><PlaceholderPage title="Ocorrências" description="Registro de acidentes, panes e reboques com anexos." /></AppLayout>} />
+          <Route path="/drivers" element={<AppLayout><PlaceholderPage title="Motoristas" description="Perfil, CNH, histórico de atribuições e multas." /></AppLayout>} />
+          <Route path="/assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
+          <Route path="/admin" element={<AppLayout><PlaceholderPage title="Administração" description="Gestão de usuários, permissões, unidades, centros de custo e templates." /></AppLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
