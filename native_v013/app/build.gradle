@@ -1,0 +1,23 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.uriel.frota.android'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.uriel.frota.android'
+        minSdk 23
+        targetSdk 33
+        versionCode 13
+        versionName '0.1.3'
+    }
+
+    buildTypes {
+        release { minifyEnabled false }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.15.0'
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+}
