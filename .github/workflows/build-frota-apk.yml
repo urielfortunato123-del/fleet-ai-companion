@@ -17,7 +17,34 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - run: chmod +x build_frota_apk.sh && ./build_frota_apk.sh
+      - name: Generate soft notification sound
+        run: |
+          mkdir -p native_v013/app/src/main/res/raw
+          python3 - <<'PY'
+          import wave, math, struct
+          fr=44100
+          frames=[]
+          for freq,dur in [(660,.12),(0,.06),(780,.14)]:
+              n=int(fr*dur)
+              for i in range(n):
+                  if freq==0: v=0
+                  else:
+                      t=i/n
+                      env=min(1,t/.12)*min(1,(1-t)/.18)
+                      v=int(.16*32767*env*math.sin(2*math.pi*freq*i/fr))
+                  frames.append(v)
+          with wave.open('native_v013/app/src/main/res/raw/soft_alert.wav','w') as w:
+              w.setnchannels(1); w.setsampwidth(2); w.setframerate(fr)
+              w.writeframes(b''.join(struct.pack('<h',x) for x in frames))
+          PY
+      - run: gradle -p native_v013 :app:assembleRelease --no-daemon
+      - name: Collect unsigned APK and signer
+        run: |
+          mkdir -p out
+          cp native_v013/app/build/outputs/apk/release/app-release-unsigned.apk out/Frota_em_Dia_v0.1.3_unsigned.apk
+          APKSIGNER_JAR=$(find "$ANDROID_HOME/build-tools" -type f -path '*/lib/apksigner.jar' | sort -V | tail -1)
+          cp "$APKSIGNER_JAR" out/apksigner.jar
+          printf 'Frota em Dia v0.1.3\nPackage: com.uriel.frota.android\nTarget SDK: 33\nOCR: ML Kit bundled 16.0.1\nNotificacoes: canal Android nativo\n' > out/build_info.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Frota-em-Dia-v0.1.3-build
