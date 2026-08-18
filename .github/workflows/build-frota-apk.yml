@@ -1,0 +1,22 @@
+name: Build Frota em Dia APK
+on:
+  push:
+    branches: [frota-em-dia-apk-build]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - run: chmod +x build_frota_apk.sh && ./build_frota_apk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Frota-em-Dia-APK
+          path: out/Frota_em_Dia_v0.1.apk
