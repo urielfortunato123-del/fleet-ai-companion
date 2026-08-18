@@ -2,6 +2,8 @@ name: Build Frota em Dia APK
 on:
   push:
     branches: [frota-em-dia-apk-build]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   build:
