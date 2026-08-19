@@ -155,7 +155,7 @@ public class MainActivity extends Activity {
     private long chooseOdometer(Text text, long previous) {
         long best = -1;
         double bestScore = -999999;
-        Pattern p = Pattern.compile("(?<!\\d)(\\d{1,3}(?:[\\.\\s]\d{3})+|\\d{4,7})(?!\\d)");
+        Pattern p = Pattern.compile("(?<![0-9])([0-9]{1,3}(?:[. ]?[0-9]{3})+|[0-9]{4,7})(?![0-9])");
         for (Text.TextBlock block : text.getTextBlocks()) {
             for (Text.Line line : block.getLines()) {
                 String lineText = line.getText();
