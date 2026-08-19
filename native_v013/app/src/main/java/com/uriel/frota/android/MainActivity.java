@@ -91,10 +91,10 @@ public class MainActivity extends Activity {
 
     public class AndroidBridge {
         @JavascriptInterface public boolean notificationsEnabled() { return notificationsAllowed(); }
-        @JavascriptInterface public void requestNotifications() { runOnUiThread(() -> requestNotifications(true)); }
+        @JavascriptInterface public void requestNotifications() { runOnUiThread(() -> MainActivity.this.requestNotifications(true)); }
         @JavascriptInterface public void openNotificationSettings() { runOnUiThread(MainActivity.this::openNotificationSettings); }
         @JavascriptInterface public void testNotification() { runOnUiThread(() -> {
-            if (!notificationsAllowed()) requestNotifications(true); else showNotification("Frota em Dia", "Notificações ativadas. Este é o alerta de manutenção.", 200);
+            if (!notificationsAllowed()) MainActivity.this.requestNotifications(true); else showNotification("Frota em Dia", "Notificações ativadas. Este é o alerta de manutenção.", 200);
         }); }
         @JavascriptInterface public void captureOdometer(long previousKm) { runOnUiThread(() -> {
             previousKmForOcr = previousKm;
